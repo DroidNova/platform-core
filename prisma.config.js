@@ -1,4 +1,7 @@
-const { defineConfig, env } = require('prisma/config');
+const { defineConfig } = require('prisma/config');
+
+const defaultDatabaseUrl =
+  'postgresql://postgres:postgres@localhost:5432/platform_core?schema=public';
 
 module.exports = defineConfig({
   schema: 'prisma/schema.prisma',
@@ -6,6 +9,6 @@ module.exports = defineConfig({
     path: 'prisma/migrations',
   },
   datasource: {
-    url: env('DATABASE_URL'),
+    url: process.env.DATABASE_URL || defaultDatabaseUrl,
   },
 });
