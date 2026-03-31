@@ -1,5 +1,6 @@
 import { INestApplication, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../generated/prisma/client';
 
 @Injectable()
 export class PrismaService
@@ -7,15 +8,15 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    super({
-      datasources: {
-        db: {
-          url:
-            process.env.DATABASE_URL ||
-            'postgresql://postgres:Droid%407408@localhost:5432/platform_core?schema=public',
-        },
-      },
-    });
+    const databaseUrl = process.env.DATABASE_URL;
+
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is required to initialize PrismaService');
+    }
+
+    const adapter = new PrismaPg({ connectionString: databaseUrl });
+
+    super({ adapter });
   }
 
   async onModuleInit(): Promise<void> {
