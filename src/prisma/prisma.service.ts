@@ -1,4 +1,5 @@
 import { INestApplication, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
@@ -7,15 +8,13 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    super({
-      datasources: {
-        db: {
-          url:
-            process.env.DATABASE_URL ||
-            'postgresql://postgres:Droid%407408@localhost:5432/platform_core?schema=public',
-        },
-      },
-    });
+    const connectionString =
+      process.env.DATABASE_URL ||
+      'postgresql://postgres:Droid%407408@localhost:5432/platform_core?schema=public';
+
+    const adapter = new PrismaPg({ connectionString });
+
+    super({ adapter });
   }
 
   async onModuleInit(): Promise<void> {
