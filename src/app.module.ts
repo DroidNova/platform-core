@@ -7,9 +7,11 @@ import { RolesModule } from './modules/roles/roles.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
+    PrismaModule,
     AdminModule,
     AuthModule,
     HealthModule,
