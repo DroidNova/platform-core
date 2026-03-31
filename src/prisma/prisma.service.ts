@@ -8,9 +8,13 @@ export class PrismaService
 {
   constructor() {
     super({
-      datasourceUrl:
-        process.env.DATABASE_URL ||
-        'postgresql://postgres:Droid%407408@localhost:5432/platform_core?schema=public',
+      datasources: {
+        db: {
+          url:
+            process.env.DATABASE_URL ||
+            'postgresql://postgres:Droid%407408@localhost:5432/platform_core?schema=public',
+        },
+      },
     });
   }
 
