@@ -1,7 +1,7 @@
 const { defineConfig } = require('prisma/config');
 
 const defaultDatabaseUrl =
-  'postgresql://postgres:postgres@localhost:5432/platform_core?schema=public';
+  'postgresql://postgres:Droid%407408@localhost:5432/platform_core?schema=public';
 
 module.exports = defineConfig({
   schema: 'prisma/schema.prisma',

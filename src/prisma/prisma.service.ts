@@ -6,6 +6,14 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  constructor() {
+    super({
+      datasourceUrl:
+        process.env.DATABASE_URL ||
+        'postgresql://postgres:Droid%407408@localhost:5432/platform_core?schema=public',
+    });
+  }
+
   async onModuleInit(): Promise<void> {
     await this.$connect();
     console.log('[Prisma] Database connection established');
