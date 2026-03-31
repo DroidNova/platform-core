@@ -1,6 +1,10 @@
 declare module '@prisma/client' {
   interface PrismaClientOptions {
-    adapter?: unknown;
+    datasources?: {
+      db?: {
+        url?: string;
+      };
+    };
   }
 
   export class PrismaClient {
