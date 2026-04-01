@@ -30,6 +30,15 @@ async function bootstrap() {
     .setTitle('Platform Core API')
     .setDescription('Reusable backend core for future domain products')
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Input JWT access token',
+      },
+      'bearer',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
