@@ -13,7 +13,7 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
-import { AuthenticatedUser, JwtPayload } from './types/jwt-payload.type';
+import { JwtPayload } from './types/jwt-payload.type';
 
 type SafeUser = {
   id: string;
@@ -22,6 +22,21 @@ type SafeUser = {
   phone: string | null;
   status: string;
   roles: string[];
+  permissions: string[];
+};
+
+type UserWithAccess = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  status: string;
+  userRoles: Array<{
+    role: {
+      name: string;
+      rolePermissions: Array<{ permission: { name: string } }>;
+    };
+  }>;
 };
 
 type TokenDuration = `${number}${'s' | 'm' | 'h' | 'd'}`;
@@ -94,9 +109,7 @@ export class AuthService {
       },
     });
 
-    const userRole = await this.prisma.role.findFirst({
-      where: { name: 'USER' },
-    });
+    const userRole = await this.prisma.role.findFirst({ where: { name: 'USER' } });
 
     if (userRole) {
       await this.prisma.userRole.create({
@@ -125,7 +138,15 @@ export class AuthService {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -175,7 +196,6 @@ export class AuthService {
 
   async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<AuthResponseDto> {
     const decoded = await this.verifyRefreshToken(refreshTokenDto.refreshToken);
-
     const user = await this.getUserByIdOrThrow(decoded.sub);
 
     if (user.status !== 'ACTIVE') {
@@ -311,13 +331,21 @@ export class AuthService {
     }
   }
 
-  private async getUserByIdOrThrow(userId: string) {
+  private async getUserByIdOrThrow(userId: string): Promise<UserWithAccess> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -330,14 +358,15 @@ export class AuthService {
     return user;
   }
 
-  private toSafeUser(user: {
-    id: string;
-    fullName: string;
-    email: string | null;
-    phone: string | null;
-    status: string;
-    userRoles: Array<{ role: { name: string } }>;
-  }): SafeUser {
+  private toSafeUser(user: UserWithAccess): SafeUser {
+    const permissions = Array.from(
+      new Set(
+        user.userRoles.flatMap((userRole) =>
+          userRole.role.rolePermissions.map((rolePermission) => rolePermission.permission.name),
+        ),
+      ),
+    );
+
     return {
       id: user.id,
       fullName: user.fullName,
@@ -345,6 +374,7 @@ export class AuthService {
       phone: user.phone,
       status: user.status,
       roles: user.userRoles.map((userRole) => userRole.role.name),
+      permissions,
     };
   }
 

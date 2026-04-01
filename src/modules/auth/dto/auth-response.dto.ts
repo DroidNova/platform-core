@@ -5,6 +5,7 @@ export class AuthUserDto {
   phone!: string | null;
   status!: string;
   roles!: string[];
+  permissions!: string[];
 }
 
 export class AuthTokensDto {

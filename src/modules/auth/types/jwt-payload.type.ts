@@ -9,4 +9,5 @@ export type AuthenticatedUser = {
   phone: string | null;
   status: string;
   roles: string[];
+  permissions: string[];
 };
