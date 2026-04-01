@@ -24,12 +24,20 @@ type SafeUser = {
   roles: string[];
 };
 
+type TokenDuration = `${number}${'s' | 'm' | 'h' | 'd'}`;
+
 @Injectable()
 export class AuthService {
   private readonly jwtAccessSecret = process.env.JWT_ACCESS_SECRET ?? '';
   private readonly jwtRefreshSecret = process.env.JWT_REFRESH_SECRET ?? '';
-  private readonly jwtAccessExpiresIn = process.env.JWT_ACCESS_EXPIRES_IN ?? '15m';
-  private readonly jwtRefreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN ?? '30d';
+  private readonly jwtAccessExpiresIn: TokenDuration = this.parseTokenDuration(
+    process.env.JWT_ACCESS_EXPIRES_IN,
+    '15m',
+  );
+  private readonly jwtRefreshExpiresIn: TokenDuration = this.parseTokenDuration(
+    process.env.JWT_REFRESH_EXPIRES_IN,
+    '30d',
+  );
 
   constructor(
     private readonly prisma: PrismaService,
@@ -288,6 +296,8 @@ export class AuthService {
     return bcrypt.compare(value, hash);
   }
 
+  private async verifyRefreshToken(token: string): Promise<JwtPayload>;
+  private async verifyRefreshToken(token: string, silent: true): Promise<JwtPayload | null>;
   private async verifyRefreshToken(token: string, silent = false): Promise<JwtPayload | null> {
     try {
       return await this.jwtService.verifyAsync<JwtPayload>(token, {
@@ -338,15 +348,15 @@ export class AuthService {
     };
   }
 
-  private durationToSeconds(value: string): number {
-    const match = /^([0-9]+)(s|m|h|d)$/.exec(value);
+  private durationToSeconds(value: TokenDuration): number {
+    const match = /^([0-9]+)(s|m|h|d)$/i.exec(value);
 
     if (!match) {
       return 900;
     }
 
     const amount = Number(match[1]);
-    const unit = match[2];
+    const unit = match[2].toLowerCase();
 
     if (unit === 's') return amount;
     if (unit === 'm') return amount * 60;
@@ -354,9 +364,22 @@ export class AuthService {
     return amount * 86400;
   }
 
-  private buildFutureDateFromDuration(duration: string): Date {
+  private buildFutureDateFromDuration(duration: TokenDuration): Date {
     const seconds = this.durationToSeconds(duration);
     return new Date(Date.now() + seconds * 1000);
+  }
+
+  private parseTokenDuration(value: string | undefined, fallback: TokenDuration): TokenDuration {
+    if (!value) {
+      return fallback;
+    }
+
+    const normalized = value.trim();
+    if (/^[0-9]+(s|m|h|d)$/i.test(normalized)) {
+      return normalized as TokenDuration;
+    }
+
+    return fallback;
   }
 
   private async findMatchingSessionId(
