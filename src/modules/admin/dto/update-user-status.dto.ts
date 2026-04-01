@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
 
 export enum AdminUserStatus {
@@ -7,6 +8,7 @@ export enum AdminUserStatus {
 }
 
 export class UpdateUserStatusDto {
+  @ApiProperty({ enum: AdminUserStatus, example: AdminUserStatus.ACTIVE })
   @IsEnum(AdminUserStatus)
   status!: AdminUserStatus;
 }
