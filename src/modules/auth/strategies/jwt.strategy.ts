@@ -26,7 +26,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -36,13 +44,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Invalid access token');
     }
 
+    const permissions: string[] = Array.from(
+      new Set(
+        user.userRoles.flatMap((userRole: { role: { rolePermissions: Array<{ permission: { name: string } }> } }) =>
+          userRole.role.rolePermissions.map((rolePermission: { permission: { name: string } }) => rolePermission.permission.name),
+        ),
+      ),
+    );
+
     return {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
       phone: user.phone,
       status: user.status,
-      roles: user.userRoles.map((userRole) => userRole.role.name),
+      roles: user.userRoles.map((userRole: { role: { name: string } }) => userRole.role.name),
+      permissions,
     };
   }
 }
