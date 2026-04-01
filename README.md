@@ -31,6 +31,27 @@
 $ npm install
 ```
 
+## Database bootstrap workflow
+
+Use the commands below to prepare a fresh environment:
+
+```bash
+# 1) generate prisma client
+npm run prisma:generate
+
+# 2) run local migration
+npm run prisma:migrate
+
+# 3) seed base roles (SUPER_ADMIN, ADMIN, USER)
+npm run prisma:seed
+
+# 4) bootstrap first super admin user (idempotent)
+npm run bootstrap:super-admin
+```
+
+The super admin bootstrap command reads these environment variables:
+`SUPER_ADMIN_FULL_NAME`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PHONE`, and `SUPER_ADMIN_PASSWORD`.
+
 ## Compile and run the project
 
 ```bash
