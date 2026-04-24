@@ -1,9 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { RolesService } from '../roles/roles.service';
 import { AssignUserRolesDto } from './dto/assign-user-roles.dto';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+
+const SUPER_ADMIN_ROLE = 'SUPER_ADMIN';
+const ADMIN_ROLE = 'ADMIN';
 
 @Injectable()
 export class AdminService {
@@ -92,12 +101,31 @@ export class AdminService {
     };
   }
 
-  async updateUserStatus(id: string, dto: UpdateUserStatusDto) {
-    const user = await this.prisma.user.findUnique({ where: { id }, select: { id: true } });
+  async updateUserStatus(id: string, dto: UpdateUserStatusDto, actor: AuthenticatedUser) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userRoles: {
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    this.assertCanModifyTargetUser({
+      actorRoles: actor.roles,
+      targetRoleNames: user.userRoles.map((userRole) => userRole.role.name),
+    });
 
     return this.prisma.user.update({
       where: { id },
@@ -113,8 +141,22 @@ export class AdminService {
     });
   }
 
-  async assignRoles(id: string, dto: AssignUserRolesDto) {
-    const user = await this.prisma.user.findUnique({ where: { id }, select: { id: true } });
+  async assignRoles(id: string, dto: AssignUserRolesDto, actor: AuthenticatedUser) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userRoles: {
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -128,6 +170,22 @@ export class AdminService {
       throw new BadRequestException('At least one role name is required');
     }
 
+    if (normalizedRoleNames.includes(SUPER_ADMIN_ROLE)) {
+      throw new ForbiddenException('SUPER_ADMIN role can only be provisioned manually');
+    }
+
+    const isActorSuperAdmin = actor.roles.includes(SUPER_ADMIN_ROLE);
+    const isPromotingToAdmin = normalizedRoleNames.includes(ADMIN_ROLE);
+
+    if (isPromotingToAdmin && !isActorSuperAdmin) {
+      throw new ForbiddenException('Only super admin can assign ADMIN role');
+    }
+
+    this.assertCanModifyTargetUser({
+      actorRoles: actor.roles,
+      targetRoleNames: user.userRoles.map((userRole) => userRole.role.name),
+    });
+
     const roles = await this.rolesService.validateRoleNames(normalizedRoleNames);
 
     await this.prisma.userRole.deleteMany({ where: { userId: id } });
@@ -137,5 +195,23 @@ export class AdminService {
     });
 
     return this.getUserById(id);
+  }
+
+  private assertCanModifyTargetUser(params: {
+    actorRoles: string[];
+    targetRoleNames: string[];
+  }): void {
+    const { actorRoles, targetRoleNames } = params;
+    const isActorSuperAdmin = actorRoles.includes(SUPER_ADMIN_ROLE);
+    const isTargetSuperAdmin = targetRoleNames.includes(SUPER_ADMIN_ROLE);
+    const isTargetAdmin = targetRoleNames.includes(ADMIN_ROLE);
+
+    if (isTargetSuperAdmin) {
+      throw new ForbiddenException('SUPER_ADMIN account cannot be modified from admin APIs');
+    }
+
+    if (isTargetAdmin && !isActorSuperAdmin) {
+      throw new ForbiddenException('Only super admin can modify admin accounts');
+    }
   }
 }
