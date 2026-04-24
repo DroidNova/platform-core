@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -24,10 +25,15 @@ import { SuccessResponseDto } from '../../common/dto/success-response.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { AdminService } from './admin.service';
 import { AssignUserRolesDto } from './dto/assign-user-roles.dto';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+
+type AuthenticatedRequest = {
+  user: AuthenticatedUser;
+};
 
 const standardErrorSchema = {
   example: {
@@ -119,8 +125,12 @@ export class AdminController {
       ],
     },
   })
-  updateUserStatus(@Param('id') id: string, @Body() dto: UpdateUserStatusDto) {
-    return this.adminService.updateUserStatus(id, dto);
+  updateUserStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.adminService.updateUserStatus(id, dto, request.user);
   }
 
   @Post(':id/roles')
@@ -148,7 +158,11 @@ export class AdminController {
       ],
     },
   })
-  assignRoles(@Param('id') id: string, @Body() dto: AssignUserRolesDto) {
-    return this.adminService.assignRoles(id, dto);
+  assignRoles(
+    @Param('id') id: string,
+    @Body() dto: AssignUserRolesDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.adminService.assignRoles(id, dto, request.user);
   }
 }
