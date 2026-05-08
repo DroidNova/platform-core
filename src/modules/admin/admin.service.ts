@@ -163,7 +163,11 @@ export class AdminService {
     }
 
     const normalizedRoleNames = Array.from(
-      new Set(dto.roleNames.map((roleName) => roleName.trim()).filter(Boolean)),
+      new Set(
+        dto.roleNames
+          .map((roleName) => roleName.trim().toUpperCase().replace(/[\s-]+/g, '_'))
+          .filter(Boolean),
+      ),
     );
 
     if (!normalizedRoleNames.length) {
