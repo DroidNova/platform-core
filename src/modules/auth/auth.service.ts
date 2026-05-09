@@ -129,11 +129,20 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto, userAgent?: string): Promise<AuthResponseDto> {
-    const identity = loginDto.emailOrPhone.trim().toLowerCase();
+    const invalidCredentialsMessage = 'Username or password is wrong';
+    const rawIdentity =
+      typeof loginDto.emailOrPhone === 'string' ? loginDto.emailOrPhone.trim() : '';
+    const rawPassword = typeof loginDto.password === 'string' ? loginDto.password : '';
+
+    if (!rawIdentity || !rawPassword) {
+      throw new UnauthorizedException(invalidCredentialsMessage);
+    }
+
+    const identity = rawIdentity.toLowerCase();
 
     const user = await this.prisma.user.findFirst({
       where: {
-        OR: [{ email: identity }, { phone: loginDto.emailOrPhone.trim() }],
+        OR: [{ email: identity }, { phone: rawIdentity }],
       },
       include: {
         userRoles: {
@@ -153,13 +162,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(invalidCredentialsMessage);
     }
 
-    const isPasswordValid = await this.compareData(loginDto.password, user.passwordHash);
+    const isPasswordValid = await this.compareData(rawPassword, user.passwordHash);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(invalidCredentialsMessage);
     }
 
     if (user.status !== 'ACTIVE') {
