@@ -1,8 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthenticatedUser, JwtPayload } from '../types/jwt-payload.type';
+import { ApiException } from '../../../common/exceptions/api.exception';
+import { ERROR_CODES } from '../../../common/constants/error-codes.constant';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -41,13 +43,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     if (!user || user.status !== 'ACTIVE') {
-      throw new UnauthorizedException('Invalid access token');
+      throw new ApiException(
+        'Invalid authentication token',
+        401,
+        ERROR_CODES.UNAUTHORIZED,
+      );
     }
 
     const permissions: string[] = Array.from(
       new Set(
-        user.userRoles.flatMap((userRole: { role: { rolePermissions: Array<{ permission: { name: string } }> } }) =>
-          userRole.role.rolePermissions.map((rolePermission: { permission: { name: string } }) => rolePermission.permission.name),
+        user.userRoles.flatMap(
+          (userRole: {
+            role: { rolePermissions: Array<{ permission: { name: string } }> };
+          }) =>
+            userRole.role.rolePermissions.map(
+              (rolePermission: { permission: { name: string } }) =>
+                rolePermission.permission.name,
+            ),
         ),
       ),
     );
@@ -58,7 +70,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       phone: user.phone,
       status: user.status,
-      roles: user.userRoles.map((userRole: { role: { name: string } }) => userRole.role.name),
+      roles: user.userRoles.map(
+        (userRole: { role: { name: string } }) => userRole.role.name,
+      ),
       permissions,
     };
   }

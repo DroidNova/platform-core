@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -14,6 +7,9 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './types/jwt-payload.type';
+import { ApiException } from '../../common/exceptions/api.exception';
+import { ERROR_CODES } from '../../common/constants/error-codes.constant';
+import { successResponse } from '../../common/helpers/api-response.helper';
 
 type SafeUser = {
   id: string;
@@ -63,12 +59,16 @@ export class AuthService {
     }
   }
 
-  async register(registerDto: RegisterDto): Promise<{ success: true; user: SafeUser }> {
+  async register(registerDto: RegisterDto) {
     const normalizedEmail = registerDto.email?.trim().toLowerCase();
     const normalizedPhone = registerDto.phone?.trim();
 
     if (!normalizedEmail && !normalizedPhone) {
-      throw new BadRequestException('Either email or phone is required');
+      throw new ApiException(
+        'Either email or phone is required',
+        400,
+        ERROR_CODES.BAD_REQUEST,
+      );
     }
 
     if (normalizedEmail) {
@@ -77,7 +77,11 @@ export class AuthService {
       });
 
       if (existingByEmail) {
-        throw new ConflictException('Email is already in use');
+        throw new ApiException(
+          'Email is already in use',
+          409,
+          ERROR_CODES.CONFLICT,
+        );
       }
     }
 
@@ -87,7 +91,11 @@ export class AuthService {
       });
 
       if (existingByPhone) {
-        throw new ConflictException('Phone is already in use');
+        throw new ApiException(
+          'Phone is already in use',
+          409,
+          ERROR_CODES.CONFLICT,
+        );
       }
     }
 
@@ -109,7 +117,9 @@ export class AuthService {
       },
     });
 
-    const userRole = await this.prisma.role.findFirst({ where: { name: 'USER' } });
+    const userRole = await this.prisma.role.findFirst({
+      where: { name: 'USER' },
+    });
 
     if (userRole) {
       await this.prisma.userRole.create({
@@ -122,20 +132,30 @@ export class AuthService {
 
     const freshUser = await this.getUserByIdOrThrow(user.id);
 
-    return {
-      success: true,
-      user: this.toSafeUser(freshUser),
-    };
+    return successResponse(
+      'User registered successfully',
+      this.toSafeUser(freshUser),
+    );
   }
 
-  async login(loginDto: LoginDto, userAgent?: string): Promise<AuthResponseDto> {
-    const invalidCredentialsMessage = 'Username or password is wrong';
+  async login(
+    loginDto: LoginDto,
+    userAgent?: string,
+  ): Promise<AuthResponseDto> {
+    const invalidCredentialsMessage = 'Invalid username or password';
     const rawIdentity =
-      typeof loginDto.emailOrPhone === 'string' ? loginDto.emailOrPhone.trim() : '';
-    const rawPassword = typeof loginDto.password === 'string' ? loginDto.password : '';
+      typeof loginDto.emailOrPhone === 'string'
+        ? loginDto.emailOrPhone.trim()
+        : '';
+    const rawPassword =
+      typeof loginDto.password === 'string' ? loginDto.password : '';
 
     if (!rawIdentity || !rawPassword) {
-      throw new UnauthorizedException(invalidCredentialsMessage);
+      throw new ApiException(
+        invalidCredentialsMessage,
+        401,
+        ERROR_CODES.INVALID_CREDENTIALS,
+      );
     }
 
     const identity = rawIdentity.toLowerCase();
@@ -162,20 +182,33 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException(invalidCredentialsMessage);
+      throw new ApiException(
+        invalidCredentialsMessage,
+        401,
+        ERROR_CODES.INVALID_CREDENTIALS,
+      );
     }
 
-    const isPasswordValid = await this.compareData(rawPassword, user.passwordHash);
+    const isPasswordValid = await this.compareData(
+      rawPassword,
+      user.passwordHash,
+    );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException(invalidCredentialsMessage);
+      throw new ApiException(
+        invalidCredentialsMessage,
+        401,
+        ERROR_CODES.INVALID_CREDENTIALS,
+      );
     }
 
     if (user.status !== 'ACTIVE') {
       throw new ForbiddenException('User is not active');
     }
 
-    const initialRefreshTokenHash = await this.hashData(`${user.id}:${Date.now()}`);
+    const initialRefreshTokenHash = await this.hashData(
+      `${user.id}:${Date.now()}`,
+    );
     const session = await this.prisma.session.create({
       data: {
         userId: user.id,
@@ -203,7 +236,9 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<AuthResponseDto> {
+  async refreshToken(
+    refreshTokenDto: RefreshTokenDto,
+  ): Promise<AuthResponseDto> {
     const decoded = await this.verifyRefreshToken(refreshTokenDto.refreshToken);
     const user = await this.getUserByIdOrThrow(decoded.sub);
 
@@ -224,13 +259,20 @@ export class AuthService {
     });
 
     if (!sessions.length) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new ApiException(
+        'Invalid refresh token',
+        401,
+        ERROR_CODES.UNAUTHORIZED,
+      );
     }
 
     let matchedSessionId: string | null = null;
 
     for (const session of sessions) {
-      const isMatch = await this.compareData(refreshTokenDto.refreshToken, session.refreshTokenHash);
+      const isMatch = await this.compareData(
+        refreshTokenDto.refreshToken,
+        session.refreshTokenHash,
+      );
 
       if (isMatch) {
         matchedSessionId = session.id;
@@ -239,7 +281,11 @@ export class AuthService {
     }
 
     if (!matchedSessionId) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new ApiException(
+        'Invalid refresh token',
+        401,
+        ERROR_CODES.UNAUTHORIZED,
+      );
     }
 
     const tokens = await this.generateTokens(user.id);
@@ -259,11 +305,14 @@ export class AuthService {
     };
   }
 
-  async logout(refreshTokenDto: RefreshTokenDto): Promise<{ success: true; message: string }> {
-    const decoded = await this.verifyRefreshToken(refreshTokenDto.refreshToken, true);
+  async logout(refreshTokenDto: RefreshTokenDto) {
+    const decoded = await this.verifyRefreshToken(
+      refreshTokenDto.refreshToken,
+      true,
+    );
 
     if (!decoded) {
-      return { success: true, message: 'Logged out successfully' };
+      return successResponse('Logged out successfully');
     }
 
     const sessions = await this.prisma.session.findMany({
@@ -274,16 +323,16 @@ export class AuthService {
       },
     });
 
-    const matchingSession = await this.findMatchingSessionId(sessions, refreshTokenDto.refreshToken);
+    const matchingSession = await this.findMatchingSessionId(
+      sessions,
+      refreshTokenDto.refreshToken,
+    );
 
     if (matchingSession) {
       await this.prisma.session.delete({ where: { id: matchingSession } });
     }
 
-    return {
-      success: true,
-      message: 'Logged out successfully',
-    };
+    return successResponse('Logged out successfully');
   }
 
   async getCurrentUser(userId: string): Promise<SafeUser> {
@@ -326,8 +375,14 @@ export class AuthService {
   }
 
   private async verifyRefreshToken(token: string): Promise<JwtPayload>;
-  private async verifyRefreshToken(token: string, silent: true): Promise<JwtPayload | null>;
-  private async verifyRefreshToken(token: string, silent = false): Promise<JwtPayload | null> {
+  private async verifyRefreshToken(
+    token: string,
+    silent: true,
+  ): Promise<JwtPayload | null>;
+  private async verifyRefreshToken(
+    token: string,
+    silent = false,
+  ): Promise<JwtPayload | null> {
     try {
       return await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret: this.jwtRefreshSecret,
@@ -336,7 +391,11 @@ export class AuthService {
       if (silent) {
         return null;
       }
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new ApiException(
+        'Invalid refresh token',
+        401,
+        ERROR_CODES.UNAUTHORIZED,
+      );
     }
   }
 
@@ -361,7 +420,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new ApiException('User not found', 404, ERROR_CODES.NOT_FOUND);
     }
 
     return user;
@@ -371,7 +430,9 @@ export class AuthService {
     const permissions = Array.from(
       new Set(
         user.userRoles.flatMap((userRole) =>
-          userRole.role.rolePermissions.map((rolePermission) => rolePermission.permission.name),
+          userRole.role.rolePermissions.map(
+            (rolePermission) => rolePermission.permission.name,
+          ),
         ),
       ),
     );
@@ -408,7 +469,10 @@ export class AuthService {
     return new Date(Date.now() + seconds * 1000);
   }
 
-  private parseTokenDuration(value: string | undefined, fallback: TokenDuration): TokenDuration {
+  private parseTokenDuration(
+    value: string | undefined,
+    fallback: TokenDuration,
+  ): TokenDuration {
     if (!value) {
       return fallback;
     }
@@ -426,7 +490,10 @@ export class AuthService {
     refreshToken: string,
   ): Promise<string | null> {
     for (const session of sessions) {
-      const matched = await this.compareData(refreshToken, session.refreshTokenHash);
+      const matched = await this.compareData(
+        refreshToken,
+        session.refreshTokenHash,
+      );
       if (matched) {
         return session.id;
       }
