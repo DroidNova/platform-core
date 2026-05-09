@@ -1,3 +1,5 @@
+import { ErrorCode } from '../constants/error-codes.constant';
+
 export interface ApiSuccessResponse<T = unknown> {
   success: true;
   message: string;
@@ -6,10 +8,9 @@ export interface ApiSuccessResponse<T = unknown> {
 
 export interface ApiErrorResponse {
   success: false;
-  statusCode: number;
-  message: string | string[];
-  timestamp: string;
-  path: string;
+  message: string;
+  errorCode: ErrorCode;
+  errors?: Record<string, unknown> | string[];
 }
 
 export interface PaginationMeta {

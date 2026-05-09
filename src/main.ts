@@ -3,7 +3,9 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import 'dotenv/config';
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { ApiException } from './common/exceptions/api.exception';
+import { ERROR_CODES } from './common/constants/error-codes.constant';
 import { SuccessResponseInterceptor } from './common/interceptors/success-response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
@@ -17,10 +19,25 @@ async function bootstrap() {
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
+      exceptionFactory: (validationErrors) => {
+        const errors = Object.fromEntries(
+          validationErrors.map((error) => [
+            error.property,
+            Object.values(error.constraints ?? {}),
+          ]),
+        );
+
+        return new ApiException(
+          'Validation failed',
+          400,
+          ERROR_CODES.VALIDATION_ERROR,
+          errors,
+        );
+      },
     }),
   );
 
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new SuccessResponseInterceptor(),

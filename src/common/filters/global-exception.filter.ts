@@ -39,7 +39,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   private resolveMessage(
     exceptionResponse: string | object | null,
     exception: unknown,
-  ): string | string[] {
+  ): string {
     if (!exceptionResponse) {
       return exception instanceof Error
         ? exception.message
@@ -58,7 +58,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const responseMessage = (exceptionResponse as { message?: unknown })
         .message;
       if (Array.isArray(responseMessage)) {
-        return responseMessage.map((msg) => String(msg));
+        return String(responseMessage[0] ?? 'Request failed');
       }
 
       if (typeof responseMessage === 'string') {
