@@ -6,7 +6,10 @@ import {
   HttpStatus,
   Post,
   Req,
+  UnauthorizedException,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -70,6 +73,11 @@ export class AuthController {
   }
 
   @Post('login')
+  @UsePipes(
+    new ValidationPipe({
+      exceptionFactory: () => new UnauthorizedException('Username or password is wrong'),
+    }),
+  )
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate a user and issue tokens' })
   @ApiBody({ type: LoginDto })
