@@ -1,15 +1,15 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './types/jwt-payload.type';
-import { ApiException } from '../../common/exceptions/api.exception';
-import { ERROR_CODES } from '../../common/constants/error-codes.constant';
-import { successResponse } from '../../common/helpers/api-response.helper';
+import { ApiException } from '../../../common/exceptions/api.exception';
+import { ERROR_CODES } from '../../../common/constants/error-codes.constant';
+import { successResponse } from '../../../common/helpers/api-response.helper';
 
 type SafeUser = {
   id: string;

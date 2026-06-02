@@ -20,10 +20,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
-import { SuccessResponseDto } from '../../common/dto/success-response.dto';
-import { Permissions } from '../../common/decorators/permissions.decorator';
-import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { PaginatedResponseDto } from '../../../common/dto/paginated-response.dto';
+import { SuccessResponseDto } from '../../../common/dto/success-response.dto';
+import { Permissions } from '../../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { AdminService } from './admin.service';

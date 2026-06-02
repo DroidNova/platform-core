@@ -12,7 +12,7 @@ Reusable NestJS backend core that can be used as a foundation for future domain 
 - Prisma + PostgreSQL baseline setup
 - operational readiness (validation, logging, docs, bootstrap scripts)
 
-> This repository intentionally avoids domain-specific business modules so it remains reusable.
+> This repository intentionally avoids domain-specific business modules so it remains reusable. Core modules live under `src/modules/platform-core`; future domain modules should be added as sibling groups such as `src/modules/domain`.
 
 ## Tech Stack
 

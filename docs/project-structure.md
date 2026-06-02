@@ -12,6 +12,8 @@ src/
   config/
   prisma/
   modules/
+    platform-core/
+    domain/ (future)
   app.module.ts
   main.ts
 ```
@@ -64,7 +66,9 @@ Business modules should not initialize DB clients directly. A dedicated Prisma l
 
 ## `src/modules/`
 
-Feature modules. Each module generally contains:
+Feature modules are grouped by product boundary. Reusable foundation modules live under `src/modules/platform-core/`. Future domain-specific products can add a sibling folder such as `src/modules/domain/` so product code stays separate from the reusable platform foundation.
+
+Each module generally contains:
 
 - `*.module.ts` (wiring)
 - `*.controller.ts` (HTTP layer)
@@ -74,13 +78,17 @@ Feature modules. Each module generally contains:
 
 ### Current module organization
 
-- `auth/` → register/login/refresh/logout/me
-- `admin/` → protected user management endpoints
-- `users/` → user-domain operations
-- `roles/` and `permissions/` → access-control data
-- `sessions/` → session-domain operations
-- `health/` → health checks
-- `settings/` → settings endpoints
+Core modules are stored under `src/modules/platform-core/`:
+
+- `platform-core/auth/` → register/login/refresh/logout/me
+- `platform-core/admin/` → protected user management endpoints
+- `platform-core/users/` → user-domain operations
+- `platform-core/roles/` and `platform-core/permissions/` → access-control data
+- `platform-core/sessions/` → session-domain operations
+- `platform-core/health/` → health checks
+- `platform-core/settings/` → settings endpoints
+
+For future domain websites, create a sibling group such as `src/modules/domain/` and place product-specific modules there.
 
 ### Why module boundaries matter
 
