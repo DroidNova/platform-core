@@ -17,7 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
-import { SuccessResponseDto } from '../../common/dto/success-response.dto';
+import { SuccessResponseDto } from '../../../common/dto/success-response.dto';
 import { AuthService } from './auth.service';
 import { AuthResponseDto, AuthUserDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';

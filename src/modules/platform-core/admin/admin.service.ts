@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { RolesService } from '../roles/roles.service';
 import { AssignUserRolesDto } from './dto/assign-user-roles.dto';

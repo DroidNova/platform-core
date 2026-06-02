@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { RoleName } from '../../generated/prisma/enums';
-import { PrismaService } from '../../prisma/prisma.service';
+import { RoleName } from '../../../generated/prisma/enums';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 @Injectable()
 export class RolesService {

@@ -96,11 +96,12 @@ Why: this enforces API contracts and blocks unexpected payloads early.
 
 When adding features:
 
-1. Create/extend a dedicated module under `src/modules`
-2. Keep module public API through controller(s)
-3. Keep business logic in service(s)
-4. Put shared/reusable concerns in `src/common`
-5. Inject dependencies via constructor (avoid manual instantiation)
+1. Create/extend reusable foundation features under `src/modules/platform-core`
+2. Create domain-specific product features under a sibling group such as `src/modules/domain`
+3. Keep module public API through controller(s)
+4. Keep business logic in service(s)
+5. Put shared/reusable concerns in `src/common`
+6. Inject dependencies via constructor (avoid manual instantiation)
 
 Do not:
 
